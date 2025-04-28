@@ -1,0 +1,21 @@
+[project]
+name = "notion-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "brian3814", email = "brian3814@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastmcp>=2.2.5",
+    "httpx>=0.28.1",
+]
+
+[project.scripts]
+notion-mcp = "notion_mcp:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
