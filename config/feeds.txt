@@ -1,0 +1,9 @@
+https://blog.cloudflare.com/rss/
+https://www.confluent.io/feed/
+https://medium.com/feed/netflix-techblog
+https://www.uber.com/en-IN/blog/engineering/rss/
+https://aws.amazon.com/tw/blogs/aws/feed/
+https://feeds.feedburner.com/nvidiablog
+https://medium.com/feed/tag/mcp
+https://medium.com/feed/tag/digital-twin
+https://kubernetes.io/feed.xml 

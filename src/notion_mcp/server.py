@@ -5,6 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
+import requests
+import feedparser
 from dotenv import load_dotenv
 from fastmcp import FastMCP, Context
 
@@ -168,3 +170,76 @@ async def get_database_schema() -> str:
     except Exception as e:
         logger.error(f"Failed to fetch database schema: {str(e)}")
         return f"Error fetching database schema: {str(e)}"
+    
+@mcp.tool()
+async def fetch_latest_articles() -> str:
+    """
+    Fetch latest articles from multiple sites and list them out.
+    """
+    feeds_path = f'{Path(__file__).parent.parent.parent}/config/feeds.txt' 
+    if not Path(feeds_path).exists():
+        raise FileNotFoundError(f"feeds.txt not found at {feeds_path}")
+
+    with open(feeds_path, "r") as f:
+        feeds = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+
+    if not feeds:
+        return "No feeds found."
+
+    articles = []
+    for url in feeds:
+        try:
+            # feedparser is synchronous, so run in thread
+            import asyncio
+            loop = asyncio.get_event_loop()
+            resp = requests.get(url)
+            feed = feedparser.parse(resp.content)
+            for entry in feed.entries[:5]:  # Limit to 5 per feed
+                articles.append({
+                    "title": entry.title,
+                    "link": entry.link,
+                    "published": getattr(entry, "published", None),
+                    "source": feed.feed.get("title", url)
+                })
+        except Exception as e:
+            articles.append({"error": f"Failed to fetch {url}: {str(e)}"})
+    if not articles:
+        return "No articles found."
+    return json.dumps(articles, indent=2)
+
+@mcp.tool()
+async def add_task_to_notion(title: str, url: str):
+    payload = {
+        "parent": {"database_id": DATABASE_ID},
+        "properties": {
+            "Task": {
+                "title": [{"text": {"content": title}}]
+            },
+            "URL": {
+                "url": url
+            }
+        }
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{NOTION_BASE_URL}/pages",
+            headers=headers,
+            json=payload
+        )
+        response.raise_for_status()
+        return response.json()
+
+@mcp.tool()
+async def add_articles_as_reading_tasks(articles: List[Dict]) -> str:
+    """
+    Add recommended articles as reading tasks in Notion.
+    """
+   
+    results = []
+    for article in articles:
+        try:
+            res = await add_task_to_notion(article["title"], article["url"])
+            results.append({"title": article["title"], "status": "added"})
+        except Exception as e:
+            results.append({"title": article["title"], "status": f"error: {str(e)}"})
+    return json.dumps(results, indent=2)
